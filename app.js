@@ -34,6 +34,14 @@ const els = {
   splitSelectedBtn: $('splitSelectedBtn'),
   rangeInput: $('rangeInput'),
   splitRangesBtn: $('splitRangesBtn'),
+  filenameModal: $('filenameModal'),
+  filenameModalTitle: $('filenameModalTitle'),
+  filenameModalDescription: $('filenameModalDescription'),
+  filenameInput: $('filenameInput'),
+  filenameExtension: $('filenameExtension'),
+  filenameHint: $('filenameHint'),
+  filenameCancelBtn: $('filenameCancelBtn'),
+  filenameConfirmBtn: $('filenameConfirmBtn'),
 };
 
 function uid() {
@@ -48,7 +56,73 @@ function showToast(message) {
 }
 
 function safeBaseName(name) {
-  return name.replace(/\.pdf$/i, '').replace(/[^a-z0-9-_]+/gi, '_').replace(/^_+|_+$/g, '') || 'document';
+  return name
+    .replace(/\.(pdf|zip)$/i, '')
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[. ]+$/g, '')
+    .trim() || 'document';
+}
+
+function suggestedSourceName(suffix) {
+  const firstSource = state.sources.values().next().value;
+  const base = firstSource ? safeBaseName(firstSource.fileName) : 'document';
+  return `${base}-${suffix}`;
+}
+
+function askForFilename({ title, description, defaultName, extension }) {
+  return new Promise((resolve) => {
+    const cleanExtension = extension.startsWith('.') ? extension : `.${extension}`;
+    let settled = false;
+
+    els.filenameModalTitle.textContent = title;
+    els.filenameModalDescription.textContent = description;
+    els.filenameInput.value = safeBaseName(defaultName);
+    els.filenameExtension.textContent = cleanExtension;
+    els.filenameHint.textContent = `The ${cleanExtension} extension will be added automatically.`;
+    els.filenameModal.classList.remove('hidden');
+
+    const cleanup = () => {
+      els.filenameModal.classList.add('hidden');
+      els.filenameConfirmBtn.removeEventListener('click', confirm);
+      els.filenameCancelBtn.removeEventListener('click', cancel);
+      els.filenameModal.removeEventListener('click', backdropCancel);
+      document.removeEventListener('keydown', keyHandler);
+    };
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(value);
+    };
+
+    const confirm = () => {
+      const typed = els.filenameInput.value.replace(new RegExp(`${cleanExtension.replace('.', '\\.')}$$`, 'i'), '');
+      const base = safeBaseName(typed);
+      if (!base) return showToast('Enter a file name.');
+      finish(`${base}${cleanExtension}`);
+    };
+
+    const cancel = () => finish(null);
+    const backdropCancel = (event) => {
+      if (event.target === els.filenameModal) cancel();
+    };
+    const keyHandler = (event) => {
+      if (event.key === 'Escape') cancel();
+      if (event.key === 'Enter' && document.activeElement === els.filenameInput) confirm();
+    };
+
+    els.filenameConfirmBtn.addEventListener('click', confirm);
+    els.filenameCancelBtn.addEventListener('click', cancel);
+    els.filenameModal.addEventListener('click', backdropCancel);
+    document.addEventListener('keydown', keyHandler);
+
+    requestAnimationFrame(() => {
+      els.filenameInput.focus();
+      els.filenameInput.select();
+    });
+  });
 }
 
 function downloadBlob(blob, filename) {
@@ -218,28 +292,55 @@ async function buildPdf(pageRefs) {
 
 async function downloadArranged() {
   if (!state.pages.length) return;
+  const filename = await askForFilename({
+    title: 'Name your arranged PDF',
+    description: 'Choose the name for the rearranged PDF you are about to create.',
+    defaultName: suggestedSourceName('arranged'),
+    extension: '.pdf',
+  });
+  if (!filename) return;
+
   const bytes = await buildPdf(state.pages);
-  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'arranged-document.pdf');
+  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), filename);
 }
 
 async function extractSelected() {
   const refs = selectedPagesInOrder();
   if (!refs.length) return showToast('Select the pages you want to extract.');
+
+  const filename = await askForFilename({
+    title: 'Name your extracted PDF',
+    description: 'Choose the name for the PDF containing your selected pages.',
+    defaultName: suggestedSourceName('selected-pages'),
+    extension: '.pdf',
+  });
+  if (!filename) return;
+
   const bytes = await buildPdf(refs);
-  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'selected-pages.pdf');
+  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), filename);
 }
 
 async function splitSelected() {
   const refs = selectedPagesInOrder();
   if (!refs.length) return showToast('Select the pages you want to split.');
+
+  const filename = await askForFilename({
+    title: 'Name your split-page ZIP',
+    description: 'Choose the ZIP name. Each selected page will be saved as a separate PDF inside it.',
+    defaultName: suggestedSourceName('split-pages'),
+    extension: '.zip',
+  });
+  if (!filename) return;
+
+  const zipBase = safeBaseName(filename);
   const zip = new window.JSZip();
   for (let i = 0; i < refs.length; i++) {
     const ref = refs[i];
     const bytes = await buildPdf([ref]);
-    zip.file(`page-${String(i + 1).padStart(3, '0')}.pdf`, bytes);
+    zip.file(`${zipBase}-page-${String(i + 1).padStart(3, '0')}.pdf`, bytes);
   }
   const blob = await zip.generateAsync({ type: 'blob' });
-  downloadBlob(blob, 'split-pages.zip');
+  downloadBlob(blob, filename);
 }
 
 function parseRanges(input, pageCount) {
@@ -280,15 +381,24 @@ async function splitRanges() {
     return showToast(err.message);
   }
 
+  const filename = await askForFilename({
+    title: 'Name your range-split ZIP',
+    description: 'Choose the ZIP name. Each range will become a separate PDF inside it.',
+    defaultName: suggestedSourceName('split-ranges'),
+    extension: '.zip',
+  });
+  if (!filename) return;
+
+  const zipBase = safeBaseName(filename);
   const zip = new window.JSZip();
   for (let i = 0; i < groups.length; i++) {
     const refs = groups[i].map(n => state.pages[n - 1]);
     const bytes = await buildPdf(refs);
     const label = groups[i].join('-');
-    zip.file(`split-${String(i + 1).padStart(2, '0')}-${label}.pdf`, bytes);
+    zip.file(`${zipBase}-${String(i + 1).padStart(2, '0')}-pages-${label}.pdf`, bytes);
   }
   const blob = await zip.generateAsync({ type: 'blob' });
-  downloadBlob(blob, 'split-ranges.zip');
+  downloadBlob(blob, filename);
 }
 
 function resetAll() {

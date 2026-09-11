@@ -3,19 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PDF Workbench</title>
+  <meta name="theme-color" content="#ED1849" />
+  <title>Girls Inc. PDF Workbench</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="app-header">
-    <div>
-      <h1>PDF Workbench</h1>
-      <p>Arrange, split, rotate, remove, and rebuild PDFs entirely in your browser.</p>
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">
+        <span class="brand-girls">GIRLS</span>
+        <span class="brand-inc">INC.</span>
+      </div>
+      <div class="brand-copy">
+        <div class="org-name">Girls Inc. of Columbus &amp; Phenix-Russell</div>
+        <h1>PDF Workbench</h1>
+        <p>Arrange, split, rotate, remove, and rebuild PDFs entirely in your browser.</p>
+      </div>
     </div>
-    <div class="privacy-pill">Local browser processing</div>
+    <div class="privacy-pill"><span class="privacy-dot"></span>Local browser processing</div>
   </header>
 
   <main>
+    <section class="mission-strip" aria-label="Girls Inc. mission">
+      <span>STRONG</span>
+      <i></i>
+      <span>SMART</span>
+      <i></i>
+      <span>BOLD</span>
+    </section>
+
     <section class="toolbar card">
       <label class="upload-btn">
         <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden />
@@ -31,6 +47,7 @@
 
     <section id="dropZone" class="drop-zone card">
       <div class="drop-inner">
+        <div class="drop-icon">PDF</div>
         <strong>Drop PDF files here</strong>
         <span>or use “Add PDF files” above</span>
       </div>
@@ -54,18 +71,21 @@
 
     <section id="splitSection" class="split-grid hidden">
       <article class="card split-card">
+        <div class="feature-kicker">EXTRACT</div>
         <h2>Extract selected pages</h2>
         <p>Creates one PDF containing only the currently selected pages, in the current arranged order.</p>
         <button id="extractSelectedBtn" class="primary">Download selected pages</button>
       </article>
 
       <article class="card split-card">
+        <div class="feature-kicker">SPLIT</div>
         <h2>Split selected pages</h2>
         <p>Creates one PDF per selected page and packages them into a ZIP file.</p>
         <button id="splitSelectedBtn" class="primary">Download selected pages as ZIP</button>
       </article>
 
       <article class="card split-card ranges-card">
+        <div class="feature-kicker">RANGES</div>
         <h2>Split by ranges</h2>
         <p>Use arranged page numbers. Separate output files with semicolons.</p>
         <div class="examples">Example: <code>1-3; 4-6; 7,9,11-13</code></div>
@@ -73,6 +93,11 @@
         <button id="splitRangesBtn" class="primary">Download range PDFs as ZIP</button>
       </article>
     </section>
+
+    <footer class="app-footer">
+      <div>Girls Inc. of Columbus &amp; Phenix-Russell</div>
+      <div>Files remain on your device during processing.</div>
+    </footer>
   </main>
 
   <template id="pageCardTemplate">
@@ -93,6 +118,27 @@
       </div>
     </article>
   </template>
+
+  <div id="filenameModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="filenameModalTitle">
+    <div class="filename-modal">
+      <div class="modal-brand-bar"></div>
+      <div class="modal-content">
+        <div class="modal-kicker">Girls Inc. PDF Workbench</div>
+        <h2 id="filenameModalTitle">Name your download</h2>
+        <p id="filenameModalDescription">Choose a name for the file before downloading.</p>
+        <label class="filename-label" for="filenameInput">File name</label>
+        <div class="filename-field">
+          <input id="filenameInput" type="text" autocomplete="off" spellcheck="false" />
+          <span id="filenameExtension" class="filename-extension">.pdf</span>
+        </div>
+        <div id="filenameHint" class="filename-hint">The extension will be added automatically.</div>
+        <div class="modal-actions">
+          <button id="filenameCancelBtn" class="secondary" type="button">Cancel</button>
+          <button id="filenameConfirmBtn" class="primary" type="button">Download</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
