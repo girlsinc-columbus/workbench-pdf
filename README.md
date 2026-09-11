@@ -1,3 +1,12 @@
+# Girls Inc. PDF Workbench v4
+
+## Logo fix
+The official Girls Inc. of Columbus & Phenix-Russell logo is embedded directly inside `index.html` as a data URI. This removes the separate-image-file dependency, so GitHub Pages cannot break the logo due to a missing file, filename mismatch, path, or case-sensitivity issue.
+
+To update an existing deployment, replace `index.html`. The included `styles.css` and `app.js` are supplied as complete companion files.
+
+---
+
 # Girls Inc. PDF Workbench
 
 A static, client-side PDF utility branded for **Girls Inc. of Columbus & Phenix-Russell** and designed for GitHub Pages.
