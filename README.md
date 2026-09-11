@@ -89,3 +89,8 @@ PDFs are processed locally in the browser. This project does not include any bac
 ## Limits / browser notes
 
 Very large PDFs can consume substantial browser memory because pages are rendered and source files remain loaded in memory. For ordinary office PDFs, reports, forms, and multi-file assembly, this approach is practical and avoids hosted-service use limits.
+
+## Affiliate logo asset
+
+The header now uses `girls-inc-columbus-phenix-russell-logo.jpg`. Keep this image in the same folder as `index.html` when publishing to GitHub Pages.
+
