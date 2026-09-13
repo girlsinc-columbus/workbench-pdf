@@ -1,105 +1,89 @@
-# Girls Inc. PDF Workbench v4
+# Girls Inc. PDF Workbench — v5
 
-## Logo fix
-The official Girls Inc. of Columbus & Phenix-Russell logo is embedded directly inside `index.html` as a data URI. This removes the separate-image-file dependency, so GitHub Pages cannot break the logo due to a missing file, filename mismatch, path, or case-sensitivity issue.
+A browser-based PDF arranging and splitting tool branded for Girls Inc. of Columbus & Phenix-Russell. PDF processing stays in the browser; the app does not upload document contents to a server.
 
-To update an existing deployment, replace `index.html`. The included `styles.css` and `app.js` are supplied as complete companion files.
+## New in v5
 
----
+### Whole-PDF workflow
+- A **Source PDFs** strip appears above the individual page workspace.
+- Drag source PDF cards left/right to reorder entire PDFs.
+- Reordering a source PDF gathers its currently included pages back into a block while preserving the **current edited internal order** of those pages.
+- Drag an entire source PDF from the Source PDFs strip directly into the individual page grid.
+- A large **INSERT N-PAGE PDF HERE** marker shows the exact insertion point.
+- Whole-PDF movement is a **MOVE**, not a duplicate/copy.
+- Deleted pages stay deleted when a PDF is moved.
 
-# Girls Inc. PDF Workbench
+### Source PDF cards
+- Compact by default.
+- Use **Expand** to see view-only thumbnails of all original pages.
+- Pages removed from the project are visibly marked as removed.
+- Expanded thumbnails are reference-only; page editing remains in the main workspace.
 
-A static, client-side PDF utility branded for **Girls Inc. of Columbus & Phenix-Russell** and designed for GitHub Pages.
+### Better large-document editing
+- Page drag-and-drop uses automatic scrolling near the browser edges.
+- **Go to page #** jumps directly to a page and highlights it.
+- **Move selected before/after page #** allows precise long-distance moves.
+- Multiple selected pages move together and preserve their current relative order.
 
-## Current features
+### Selection behavior
+- Click = select one page.
+- Ctrl+Click / Cmd+Click = add or remove individual pages from the selection.
+- Shift+Click = select a continuous range from the most recent selection anchor.
 
-- Upload one or multiple PDF files
-- View every page as an individual thumbnail
-- Drag and drop pages to rearrange the export order
-- Combine pages from multiple PDFs
-- Select individual pages
-- Rotate pages left/right
-- Remove pages before export
-- Download the arranged PDF
-- Extract selected pages into one PDF
-- Split selected pages into individual PDFs packaged as a ZIP
-- Split by custom page ranges such as `1-3; 4-6; 7,9,11-13`
-- **Filename prompt before every download/export**
-- No server-side PDF upload or storage
+### Undo / Redo
+- Visible **Undo** and **Redo** buttons.
+- Ctrl+Z / Cmd+Z = Undo.
+- Ctrl+Y / Cmd+Y = Redo.
+- Ctrl+Shift+Z / Cmd+Shift+Z = Redo.
+- Undo/Redo covers page moves, whole-PDF moves, source-PDF reorder, deletion, rotation, bulk moves, and Reset Arrangement.
+- Editing history is kept for up to 100 actions.
 
-## Filename behavior
+### Performance
+- Page and source thumbnails use lazy rendering so large projects do not try to render every PDF page immediately.
 
-Every export opens a branded filename dialog before the file is created:
+### Reset vs Clear
+- **Reset arrangement** restores all currently included pages to original upload/file order and original page order. Deleted pages remain deleted. Rotations are preserved.
+- **Clear project** removes every loaded PDF and clears editing history.
 
-1. **Download arranged PDF** → prompts for a `.pdf` filename
-2. **Download selected pages** → prompts for a `.pdf` filename
-3. **Download selected pages as ZIP** → prompts for a `.zip` filename
-4. **Download range PDFs as ZIP** → prompts for a `.zip` filename
+## Existing functionality retained
+- Upload multiple PDFs.
+- Individual page thumbnails.
+- Drag individual pages into a new order.
+- Rotate pages individually or as a selection.
+- Delete pages.
+- Extract selected pages into one PDF.
+- Split selected pages into individual PDFs inside a ZIP.
+- Split by custom ranges.
+- Custom filename dialog for all download operations.
+- Girls Inc. of Columbus & Phenix-Russell branding and embedded logo.
 
-The extension is displayed separately and added automatically. Invalid Windows/macOS filename characters are replaced safely.
+## Update an existing GitHub Pages installation
 
-For ZIP exports, the chosen ZIP base name is also used to name the PDF files inside the ZIP.
+1. Download and unzip the v5 package.
+2. In your existing GitHub repository, replace these files in the repository root:
+   - `index.html`
+   - `styles.css`
+   - `app.js`
+   - `README.md` (optional, but recommended)
+3. Commit the changes. Example commit message:
 
-## Girls Inc. branding
+   `Add whole-PDF arranging, navigator, undo-redo, and large-file improvements`
 
-The interface uses the Girls Inc. brand palette:
+4. If GitHub Pages is already configured to deploy from the `main` branch and `/ (root)`, no Pages setting changes are needed.
+5. After deployment completes, use **Ctrl+F5** on Windows to force-refresh the site if the old version is cached.
 
-- Girls Inc. Red — `#ED1849`
-- White — `#FFFFFF`
-- PMS 430 Gray — `#949CA1`
-- Black — `#000000`
-- Cranberry — `#920526`
-- Pacific Blue — `#009FB7`
-- Saffron — `#FF9C33`
-- Electric Lemon — `#EEFF41`
+## Files
 
-The page header identifies **Girls Inc. of Columbus & Phenix-Russell**, and the interface includes a Strong • Smart • Bold brand treatment.
+- `index.html` — application layout, embedded Girls Inc. logo, controls, templates, and dialogs.
+- `styles.css` — Girls Inc. styling, source PDF strip, page workspace, insertion marker, and responsive layout.
+- `app.js` — PDF loading, arranging, whole-document movement, undo/redo, selection, lazy rendering, splitting, and export logic.
 
-## Updating an existing GitHub repository
+## External browser libraries
 
-If the original PDF Workbench is already deployed, replace these files in the repository root:
+The app loads these libraries from jsDelivr:
+- PDF.js
+- pdf-lib
+- SortableJS
+- JSZip
 
-- `index.html`
-- `styles.css`
-- `app.js`
-- `README.md` (recommended, but not required for the app itself)
-
-### Easiest update method on GitHub.com
-
-1. Open the repository.
-2. Open `index.html`.
-3. Choose the pencil/edit button.
-4. Replace the entire file contents with the new `index.html` and commit the change.
-5. Repeat for `styles.css` and `app.js`.
-6. Optionally replace `README.md` as well.
-7. GitHub Pages will redeploy automatically after the commits reach the branch configured under **Settings → Pages**.
-
-### Easier method when replacing all files
-
-1. Download and unzip the updated package.
-2. In the GitHub repository, choose **Add file → Upload files**.
-3. Drag the updated `index.html`, `styles.css`, `app.js`, and `README.md` into the upload area.
-4. GitHub will warn that files with those names already exist; the new versions will replace them in the commit.
-5. Add a commit message such as `Add filename prompts and Girls Inc branding`.
-6. Commit directly to `main` (or merge the update into the branch used by GitHub Pages).
-7. Open **Settings → Pages** if needed to confirm the site is still deploying from the correct branch and `/ (root)` folder.
-
-## Privacy model
-
-PDFs are processed locally in the browser. This project does not include any backend or upload endpoint. The JavaScript libraries are loaded from jsDelivr CDN, so an internet connection is required to load the app libraries unless they are later self-hosted inside the repository.
-
-## Libraries
-
-- Mozilla PDF.js — page rendering
-- pdf-lib — PDF reconstruction and rotation
-- SortableJS — drag-and-drop rearranging
-- JSZip — packaging split PDFs into ZIP files
-
-## Limits / browser notes
-
-Very large PDFs can consume substantial browser memory because pages are rendered and source files remain loaded in memory. For ordinary office PDFs, reports, forms, and multi-file assembly, this approach is practical and avoids hosted-service use limits.
-
-## Affiliate logo asset
-
-The header now uses `girls-inc-columbus-phenix-russell-logo.jpg`. Keep this image in the same folder as `index.html` when publishing to GitHub Pages.
-
+The PDF documents themselves are processed locally in the browser.
