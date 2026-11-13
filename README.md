@@ -87,3 +87,16 @@ The app loads these libraries from jsDelivr:
 - JSZip
 
 The PDF documents themselves are processed locally in the browser.
+
+## v5.2 logo update
+The header now uses `girls-inc-columbus-phenix-russell-logo-transparent.png`, a transparent-background version of the supplied affiliate logo. Keep this PNG in the same repository folder as `index.html`.
+
+
+## Version 5.3 interface update
+
+- The page arrangement workspace is now on the left, with the source PDF list in a vertical right-side panel.
+- Source PDFs can be reordered top-to-bottom. The source panel scrolls vertically and auto-scrolls while dragging near its edges.
+- Individual page thumbnails remain on the left and retain all existing selection, reorder, rotate, delete, move, undo/redo, split, and download behaviors.
+- Click a page thumbnail to open a full-size page preview. Close the preview or use Previous/Next to browse pages, then return to the same arrangement.
+- On narrow screens, the source PDF panel moves above the page workspace for usability.
+- This is a layout and preview update; PDF processing remains local in the browser.

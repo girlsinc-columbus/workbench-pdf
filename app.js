@@ -22,6 +22,7 @@ const state = {
   draggingSourceId: null,
   sourceDropIndex: null,
   thumbnailObserver: null,
+  viewerPageId: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -65,6 +66,14 @@ const els = {
   filenameHint: $('filenameHint'),
   filenameCancelBtn: $('filenameCancelBtn'),
   filenameConfirmBtn: $('filenameConfirmBtn'),
+  pageViewer: $('pageViewer'),
+  pageViewerTitle: $('pageViewerTitle'),
+  pageViewerSource: $('pageViewerSource'),
+  pageViewerPosition: $('pageViewerPosition'),
+  pageViewerCanvas: $('pageViewerCanvas'),
+  closePageViewerBtn: $('closePageViewerBtn'),
+  previousViewerPageBtn: $('previousViewerPageBtn'),
+  nextViewerPageBtn: $('nextViewerPageBtn'),
 };
 
 function uid() {
@@ -322,6 +331,7 @@ async function addFiles(fileList) {
 }
 
 function renderAll() {
+  if (state.viewerPageId && !state.pages.some((page) => page.id === state.viewerPageId)) closePageViewer();
   renderSourceList();
   renderPageGrid();
   updateSummary();
@@ -386,16 +396,26 @@ function clearSourceListDropIndicators() {
 
 function handleSourceListDragOver(event) {
   if (!state.draggingSourceId) return;
+  const cards = [...els.sourceList.querySelectorAll('.source-card')];
   const target = event.target.closest('.source-card');
-  if (!target) return;
+  const listRect = els.sourceList.getBoundingClientRect();
+  if (!target && (event.clientY < listRect.top || event.clientY > listRect.bottom)) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
   clearSourceListDropIndicators();
-  const rect = target.getBoundingClientRect();
-  const after = event.clientX > rect.left + rect.width / 2;
-  target.classList.add(after ? 'source-drop-after' : 'source-drop-before');
-  const targetIndex = state.sourceOrder.indexOf(target.dataset.sourceId);
-  state._sourceListDropIndex = targetIndex + (after ? 1 : 0);
+
+  if (target) {
+    const rect = target.getBoundingClientRect();
+    const after = event.clientY > rect.top + rect.height / 2;
+    target.classList.add(after ? 'source-drop-after' : 'source-drop-before');
+    const targetIndex = state.sourceOrder.indexOf(target.dataset.sourceId);
+    state._sourceListDropIndex = targetIndex + (after ? 1 : 0);
+  } else if (cards.length) {
+    state._sourceListDropIndex = event.clientY < cards[0].getBoundingClientRect().top ? 0 : state.sourceOrder.length;
+  } else {
+    state._sourceListDropIndex = 0;
+  }
+  autoScrollDuringNativeDrag(event);
 }
 
 function handleSourceListDrop(event) {
@@ -445,6 +465,65 @@ function renderExpandedSource(sourceId, container) {
     observeCanvas(canvas, sourceId, i, 0);
   }
   container.replaceChildren(grid);
+}
+
+async function openPageViewer(pageId) {
+  const index = state.pages.findIndex((page) => page.id === pageId);
+  if (index < 0) return;
+  state.viewerPageId = pageId;
+  els.pageViewer.classList.remove('hidden');
+  document.body.classList.add('viewer-open');
+  await renderPageViewer();
+  els.closePageViewerBtn.focus();
+}
+
+async function renderPageViewer() {
+  const index = state.pages.findIndex((page) => page.id === state.viewerPageId);
+  if (index < 0) return closePageViewer();
+  const ref = state.pages[index];
+  const source = state.sources.get(ref.sourceId);
+  if (!source) return closePageViewer();
+  els.pageViewerTitle.textContent = `Page ${index + 1}`;
+  els.pageViewerSource.textContent = `${source.fileName} • Original page ${ref.sourcePageIndex + 1}${ref.rotation ? ` • Rotated ${ref.rotation}°` : ''}`;
+  els.pageViewerPosition.textContent = `${index + 1} of ${state.pages.length}`;
+  els.previousViewerPageBtn.disabled = index <= 0;
+  els.nextViewerPageBtn.disabled = index >= state.pages.length - 1;
+  const canvas = els.pageViewerCanvas;
+  canvas.width = 1;
+  canvas.height = 1;
+  const pdfPage = await source.pdfjsDoc.getPage(ref.sourcePageIndex + 1);
+  if (state.viewerPageId !== ref.id || els.pageViewer.classList.contains('hidden')) return;
+  const rotation = (pdfPage.rotate + ref.rotation) % 360;
+  const base = pdfPage.getViewport({ scale: 1, rotation });
+  const stage = canvas.parentElement;
+  const maxW = Math.max(240, stage.clientWidth - 48);
+  const maxH = Math.max(240, stage.clientHeight - 48);
+  const scale = Math.min(maxW / base.width, maxH / base.height, 2.2);
+  const viewport = pdfPage.getViewport({ scale, rotation });
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+  canvas.style.width = `${Math.floor(viewport.width)}px`;
+  canvas.style.height = `${Math.floor(viewport.height)}px`;
+  await pdfPage.render({
+    canvasContext: canvas.getContext('2d'),
+    viewport,
+    transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+  }).promise;
+}
+
+function closePageViewer() {
+  els.pageViewer.classList.add('hidden');
+  document.body.classList.remove('viewer-open');
+  state.viewerPageId = null;
+}
+
+async function stepViewerPage(delta) {
+  const index = state.pages.findIndex((page) => page.id === state.viewerPageId);
+  const next = state.pages[index + delta];
+  if (!next) return;
+  state.viewerPageId = next.id;
+  await renderPageViewer();
 }
 
 function handlePageSelection(pageId, event) {
@@ -501,6 +580,10 @@ function renderPageGrid() {
     });
     node.addEventListener('click', (event) => {
       if (event.target.closest('.mini-actions') || event.target.closest('.select-toggle')) return;
+      if (event.target.closest('.thumb-wrap')) {
+        openPageViewer(page.id);
+        return;
+      }
       selectionHandler(event);
     });
     node.addEventListener('keydown', (event) => {
@@ -522,6 +605,8 @@ function renderPageGrid() {
       removePages([page.id]);
     });
 
+    const thumbWrap = node.querySelector('.thumb-wrap');
+    thumbWrap.title = 'Click to view this page at full size';
     const canvas = node.querySelector('canvas');
     observeCanvas(canvas, page.sourceId, page.sourcePageIndex, page.rotation);
     els.pageGrid.appendChild(node);
@@ -760,8 +845,14 @@ function cleanupSourceDrag() {
 }
 
 function autoScrollDuringNativeDrag(event) {
-  const zone = 110;
-  const speed = 22;
+  const zone = 105;
+  const speed = 20;
+  const sourceRect = els.sourceList.getBoundingClientRect();
+  if (event.clientX >= sourceRect.left && event.clientX <= sourceRect.right) {
+    if (event.clientY < sourceRect.top + zone) els.sourceList.scrollTop -= speed;
+    else if (event.clientY > sourceRect.bottom - zone) els.sourceList.scrollTop += speed;
+    return;
+  }
   if (event.clientY < zone) window.scrollBy(0, -speed);
   else if (window.innerHeight - event.clientY < zone) window.scrollBy(0, speed);
 }
@@ -913,6 +1004,12 @@ els.sourceList.addEventListener('dragover', handleSourceListDragOver);
 els.sourceList.addEventListener('drop', handleSourceListDrop);
 els.pageGrid.addEventListener('dragover', handleSourceGridDragOver);
 els.pageGrid.addEventListener('drop', handleSourceGridDrop);
+els.closePageViewerBtn.addEventListener('click', closePageViewer);
+els.previousViewerPageBtn.addEventListener('click', () => stepViewerPage(-1));
+els.nextViewerPageBtn.addEventListener('click', () => stepViewerPage(1));
+els.pageViewer.addEventListener('click', (event) => {
+  if (event.target === els.pageViewer) closePageViewer();
+});
 
 ['dragenter', 'dragover'].forEach((type) => els.dropZone.addEventListener(type, (e) => {
   e.preventDefault();
@@ -926,6 +1023,10 @@ els.dropZone.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
 
 document.addEventListener('keydown', (event) => {
   const tag = document.activeElement?.tagName;
+  if (event.key === 'Escape' && !els.pageViewer.classList.contains('hidden')) {
+    closePageViewer();
+    return;
+  }
   const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if (isTyping) return;
   const modifier = event.ctrlKey || event.metaKey;
