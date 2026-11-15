@@ -1,3 +1,10 @@
+# Girls Inc. PDF Workbench v5.4
+
+## v5.4 improvements
+- Source PDFs and their individual page cards now use a seven-color sequence: Blue, Yellow, Orange, Green, Red, Purple, Cyan. The sequence repeats from Blue for the eighth PDF. Colors stay assigned to the uploaded PDF when source cards are reordered.
+- Hovering over a source PDF name shows its complete filename.
+- The page preview now uses the available modal space and waits for layout before rendering, preventing the undersized first-open preview.
+
 # Girls Inc. PDF Workbench — v5
 
 A browser-based PDF arranging and splitting tool branded for Girls Inc. of Columbus & Phenix-Russell. PDF processing stays in the browser; the app does not upload document contents to a server.

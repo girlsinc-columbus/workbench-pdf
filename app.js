@@ -6,6 +6,22 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
 
 const HISTORY_LIMIT = 100;
 
+// Source PDF colors repeat after seven uploads, in the requested order.
+const SOURCE_COLORS = [
+  { name: 'Blue', color: '#3B82F6', tint: 'rgba(59,130,246,.10)' },
+  { name: 'Yellow', color: '#EAB308', tint: 'rgba(234,179,8,.14)' },
+  { name: 'Orange', color: '#F97316', tint: 'rgba(249,115,22,.11)' },
+  { name: 'Green', color: '#22A06B', tint: 'rgba(34,160,107,.11)' },
+  { name: 'Red', color: '#EF4444', tint: 'rgba(239,68,68,.10)' },
+  { name: 'Purple', color: '#8B5CF6', tint: 'rgba(139,92,246,.11)' },
+  { name: 'Cyan', color: '#06B6D4', tint: 'rgba(6,182,212,.11)' },
+];
+
+function sourceColorFor(sourceId) {
+  const uploadIndex = state.uploadOrder.indexOf(sourceId);
+  return SOURCE_COLORS[(uploadIndex < 0 ? 0 : uploadIndex) % SOURCE_COLORS.length];
+}
+
 const state = {
   sources: new Map(),
   pages: [],
@@ -345,8 +361,13 @@ function renderSourceList() {
     if (!source) continue;
     const node = els.sourceCardTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.sourceId = sourceId;
+    const sourceColor = sourceColorFor(sourceId);
+    node.style.setProperty('--source-color', sourceColor.color);
+    node.style.setProperty('--source-tint', sourceColor.tint);
     const includedCount = getCurrentSourcePages(sourceId).length;
     node.querySelector('.source-file-name').textContent = source.fileName;
+    node.querySelector('.source-file-name').title = source.fileName;
+    node.title = source.fileName;
     node.querySelector('.source-page-count').textContent = `${includedCount} of ${source.pageCount} page${source.pageCount === 1 ? '' : 's'} included`;
     const previewCanvas = node.querySelector('.source-preview canvas');
     observeCanvas(previewCanvas, sourceId, 0, 0);
@@ -493,12 +514,16 @@ async function renderPageViewer() {
   canvas.height = 1;
   const pdfPage = await source.pdfjsDoc.getPage(ref.sourcePageIndex + 1);
   if (state.viewerPageId !== ref.id || els.pageViewer.classList.contains('hidden')) return;
+  // Wait until the overlay has completed layout; otherwise the stage can report
+  // a near-zero height and PDF.js renders a tiny page on the first open.
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  if (state.viewerPageId !== ref.id || els.pageViewer.classList.contains('hidden')) return;
   const rotation = (pdfPage.rotate + ref.rotation) % 360;
   const base = pdfPage.getViewport({ scale: 1, rotation });
   const stage = canvas.parentElement;
-  const maxW = Math.max(240, stage.clientWidth - 48);
-  const maxH = Math.max(240, stage.clientHeight - 48);
-  const scale = Math.min(maxW / base.width, maxH / base.height, 2.2);
+  const maxW = Math.max(320, stage.clientWidth - 64);
+  const maxH = Math.max(320, stage.clientHeight - 64);
+  const scale = Math.min(maxW / base.width, maxH / base.height);
   const viewport = pdfPage.getViewport({ scale, rotation });
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.floor(viewport.width * dpr);
@@ -570,6 +595,10 @@ function renderPageGrid() {
     node.querySelector('.index-badge').textContent = i + 1;
 
     const source = state.sources.get(page.sourceId);
+    const sourceColor = sourceColorFor(page.sourceId);
+    node.style.setProperty('--source-color', sourceColor.color);
+    node.style.setProperty('--source-tint', sourceColor.tint);
+    node.title = `${source?.fileName || 'Unknown source'} • Original page ${page.sourcePageIndex + 1}`;
     node.querySelector('.source-name').textContent = source?.fileName || 'Unknown source';
     node.querySelector('.source-page').textContent = `Original page ${page.sourcePageIndex + 1}${page.rotation ? ` • ${page.rotation}°` : ''}`;
 
